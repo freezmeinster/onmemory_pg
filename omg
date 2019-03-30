@@ -1,8 +1,17 @@
 #!/usr/bin/env sh
 
+case $(uname) in
+  FreeBSD)
+    PG_BIN_DEFAULT=/usr/local/bin
+  ;;
+  Linux)
+    PG_BIN_DEFAULT=/usr/lib/postgresql/10/bin
+  ;;
+esac
+
 DATA_PATH=${DATA_PATH:-data/}
 DATA_SIZE=${DATA_SIZE:-512m}
-PG_BIN=${PG_BIN:-/usr/lib/postgresql/10/bin}
+PG_BIN=${PG_BIN:-$PG_BIN_DEFAULT}
 SOCKET_PATH=${SOCKET_PATH:-/tmp/}
 PG_PORT=${PG_PORT:-5433}
 CUR_UID=$(id -u)
