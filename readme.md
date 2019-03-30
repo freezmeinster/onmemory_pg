@@ -14,3 +14,7 @@ Tested on Ubuntu 18.04, FreeBSD support will added soon
 
 By default this script will create memory filesystem with size 512 MB. You can alter this size with DATA_SIZE environment,
 example `DATA_SIZE=2g ./omg mount`, this command will create memory filesystem with size 2 GB.
+
+## Prerequisite ##
+For this script can run, you need `sudo` and `postgresql` package installed on your system. 
+For FreeBSD system please run this script as ordinary user not `root` user.
