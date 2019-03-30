@@ -1,0 +1,120 @@
+#!/usr/bin/env sh
+
+DATA_PATH=${DATA_PATH:-data/}
+DATA_SIZE=${DATA_SIZE:-512m}
+PG_BIN=${PG_BIN:-/usr/lib/postgresql/10/bin}
+SOCKET_PATH=${SOCKET_PATH:-/tmp/}
+PG_PORT=${PG_PORT:-5433}
+CUR_UID=$(id -u)
+CUR_GID=$(id -g)
+
+check_mount(){
+   com=$(mount | grep "tmpfs on $(readlink -f $1)" | wc -l)
+   echo $com
+}
+
+mounted(){
+    mounted=$(check_mount $DATA_PATH)
+    if [ "$mounted" = "$1" ]; then
+        case $1 in
+            1)
+                echo "Target directory $DATA_PATH already mounted"
+            ;;
+            0)
+                echo "Target directory $DATA_PATH not mounted"
+            ;;
+        esac
+        exit 0
+    fi 
+}
+
+mount_fs(){
+    mounted 1
+    echo "This command need sudo access, are you want to proceed ? [y|N]"
+    read procs
+    if [ "$procs" = "y" ]; then
+        sudo mount -t tmpfs -o size=$DATA_SIZE,uid=$CUR_UID,gid=$CUR_GID tmpfs $DATA_PATH 
+        echo "Mounting Memory Filesytem == OK"
+    else
+        echo "Command aborted !"
+    fi
+}
+
+unmount_fs(){
+    mounted 0
+    echo "This command need sudo access, are you want to proceed ? [y|N]"
+    read procs
+    if [ "$procs" = "y" ]; then
+        sudo umount $DATA_PATH 
+        echo "Unmounting Memory Filesytem == OK"
+    else
+        echo "Command aborted !"
+    fi
+}
+
+info(){
+    mounted 0
+    DF=$(df -h $DATA_PATH |tr -s ' ')
+    echo "Total Size: $(echo $DF |cut -d' ' -f9)"
+    echo "Total Used: $(echo $DF |cut -d' ' -f10)"
+    echo "Used %: $(echo $DF |cut -d' ' -f12)"
+}
+start(){
+	$PG_BIN/pg_ctl -D $DATA_PATH -o "-k $SOCKET_PATH -F -p $PG_PORT" start
+}
+
+stop(){
+	$PG_BIN/pg_ctl -D $DATA_PATH -o "-k $SOCKET_PATH -F -p $PG_PORT" stop
+}
+
+clusterinfo(){
+	$PG_BIN/pg_ctl -D $DATA_PATH -o "-k $SOCKET_PATH -F -p $PG_PORT" status
+}
+init(){
+	$PG_BIN/initdb -D $DATA_PATH -U $USER
+}
+
+clean(){
+	rm -rf $DATA_PATH/*
+}
+
+setup_alias()
+{
+    echo "Please run  commands below"
+    printf 'alias "createdb_omg"="createdb -h 127.0.0.1 -p %s"\n' $PG_PORT
+    printf 'alias "dropdb_omg"="dropdb -h 127.0.0.1 -p %s"\n' $PG_PORT
+    printf 'alias "psql_omg"="psql -h 127.0.0.1 -p %s"\n' $PG_PORT
+}
+
+case $1 in
+    mount)
+        mount_fs
+    ;;
+    umount)
+        unmount_fs
+    ;;
+    start)
+        start
+    ;;
+    stop)
+        stop
+    ;;
+    init)
+        init
+    ;;
+    clean)
+        clean
+    ;;
+    storageinfo)
+       info
+    ;;
+    clusterinfo)
+       clusterinfo
+    ;;
+    setupalias)
+        setup_alias
+    ;;
+    *)
+        echo "usage: $1 [mount|init|start|stop|clean|storageinfo|clusterinfo|setupalias]"
+    ;;
+esac
